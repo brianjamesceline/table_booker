@@ -4,6 +4,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
 
 from .models import Restaurant
+from .forms import UserForm
+
 
 def home_page(request):
     if not request.user.is_authenticated:
@@ -37,7 +39,20 @@ def login_page(request):
 
 
 def signup_page(request):
-    return render(request, "signup.html", context={})
+    if request.method == "POST":
+        form = UserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Registration successful.")
+            return redirect("table_booker:home")
+        messages.error(request, "Unsuccessful registration. Invalid information.")
+    form = UserForm()
+    return render(
+        request=request,
+        template_name="signup.html",
+        context={"register_form": form},
+    )
 
 
 def logout_page(request):
