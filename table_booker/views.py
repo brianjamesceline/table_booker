@@ -4,7 +4,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
 
 from .models import Restaurant
-from .forms import UserForm
+from .forms import UserForm, BookingForm
+
 
 
 def home_page(request):
@@ -13,6 +14,18 @@ def home_page(request):
 
     context = {"restaurants": Restaurant.objects.all()}
     return render(request, "home.html", context=context)
+
+
+def book_restaurant(request, restaurant_id):
+    if not request.user.is_authenticated:
+        return redirect("table_booker:login")
+
+    form = BookingForm()
+    return render(
+        request=request,
+        template_name="book_restaurant.html",
+        context={"booking_form": form},
+    )
 
 
 def login_page(request):
