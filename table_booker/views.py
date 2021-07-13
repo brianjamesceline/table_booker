@@ -20,7 +20,28 @@ def book_restaurant(request, restaurant_id):
     if not request.user.is_authenticated:
         return redirect("table_booker:login")
 
-    form = BookingForm()
+    try:
+        restaurant = Restaurant.objects.get(id=restaurant_id)
+    except Restaurant.DoesNotExist:
+        restaurant = None
+
+    if restaurant is None:
+        messages.error(request, "Invalid restaurant supplied")
+        return redirect("table_booker:home")
+
+    if request.method == "POST":
+        form = BookingForm(request.POST)
+
+        if form.is_valid():
+            booking = form.save(commit=False)
+            booking.user = request.user
+            booking.restaurant = restaurant
+            booking.save()
+            messages.info(request, f"You successfully booked {restaurant.name}.")
+            return redirect("table_booker:home")
+    else:
+        form = BookingForm()
+
     return render(
         request=request,
         template_name="book_restaurant.html",
