@@ -3,9 +3,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
 
+from .forms import BookingForm, UserForm
 from .models import Restaurant
-from .forms import UserForm, BookingForm
-
 
 
 def home_page(request):
@@ -66,9 +65,7 @@ def login_page(request):
             messages.error(request, "Invalid username or password.")
     form = AuthenticationForm()
     return render(
-        request=request,
-        template_name="login.html",
-        context={"login_form": form},
+        request=request, template_name="login.html", context={"login_form": form},
     )
 
 
@@ -83,9 +80,7 @@ def signup_page(request):
         messages.error(request, "Unsuccessful registration. Invalid information.")
     form = UserForm()
     return render(
-        request=request,
-        template_name="signup.html",
-        context={"register_form": form},
+        request=request, template_name="signup.html", context={"register_form": form},
     )
 
 
