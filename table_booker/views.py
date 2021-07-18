@@ -59,8 +59,6 @@ def login_page(request):
                 login(request, user)
                 messages.info(request, f"You are now logged in as {username}.")
                 return redirect("table_booker:home")
-            else:
-                messages.error(request, "Invalid username or password.")
         else:
             messages.error(request, "Invalid username or password.")
     form = AuthenticationForm()
