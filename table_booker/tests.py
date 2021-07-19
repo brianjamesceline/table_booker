@@ -33,7 +33,7 @@ class HomePageTests(TestCase):
         self.assertEqual(list(context), list(Restaurant.objects.all()))
 
 
-class TestLoginPage(TestCase):
+class LoginPageTests(TestCase):
     def setUp(self):
         self.user = UserFactory()
         self.url = "/login"
@@ -72,7 +72,7 @@ class TestLoginPage(TestCase):
         self.assertTrue("Invalid username or password." in message.message)
 
 
-class TestSignUpPage(TestCase):
+class SignUpPageTests(TestCase):
     def setUp(self):
         self.url = "/signup"
         self.response = self.client.get(self.url)
@@ -116,3 +116,16 @@ class TestSignUpPage(TestCase):
         self.assertTrue(
             "Unsuccessful registration. Invalid information." in message.message
         )
+
+
+class LogoutPageTests(TestCase):
+    def setUp(self):
+        self.url = "/logout"
+        self.response = self.client.get(self.url, follow=True)
+
+    def test_logout(self):
+
+        message = list(self.response.context.get("messages"))[0]
+        self.assertEqual(message.tags, "info")
+        self.assertEqual(message.message, "You have successfully logged out.")
+        self.assertRedirects(self.response, "/login", status_code=302)
