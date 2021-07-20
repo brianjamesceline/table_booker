@@ -1,5 +1,6 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+
 
 class Restaurant(models.Model):
     name = models.CharField(max_length=150)
@@ -14,7 +15,9 @@ class Restaurant(models.Model):
 
 
 class Table(models.Model):
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, related_name="tables"
+    )
     name = models.CharField(max_length=250)
     capacity = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -62,4 +65,3 @@ class Setting(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 
-    
