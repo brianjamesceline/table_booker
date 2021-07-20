@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from .factories import RestaurantFactory, TableFactory, UserFactory
 from .forms import BookingForm, UserForm
-from .models import Restaurant
+from .models import Restaurant, Table
 
 
 class HomePageTests(TestCase):
@@ -190,3 +190,15 @@ class BookingRestaurantTests(TestCase):
 
     def test_booking_past_date(self):
         pass
+
+    def test_table_queryset(self):
+        TableFactory()
+
+        self.client.force_login(self.user)
+        response = self.client.get(self.url, follow=True)
+        context_form = response.context["booking_form"]
+
+        expected_queryset = context_form.fields["table"].queryset
+        queryset = Table.objects.filter(restaurant_id=self.restaurant.id)
+
+        self.assertEqual(list(expected_queryset), list(queryset))

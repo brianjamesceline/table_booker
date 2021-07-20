@@ -29,7 +29,7 @@ def book_restaurant(request, restaurant_id):
         return redirect("table_booker:home")
 
     if request.method == "POST":
-        form = BookingForm(request.POST)
+        form = BookingForm(restaurant, request.POST)
 
         if form.is_valid():
             booking = form.save(commit=False)
@@ -39,7 +39,7 @@ def book_restaurant(request, restaurant_id):
             messages.info(request, f"You successfully booked {restaurant.name}.")
             return redirect("table_booker:home")
     else:
-        form = BookingForm()
+        form = BookingForm(restaurant)
 
     return render(
         request=request,
