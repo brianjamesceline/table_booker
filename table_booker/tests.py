@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from .factories import BookingFactory, RestaurantFactory, TableFactory, UserFactory
 from .forms import BookingForm, UserForm
-from .models import Restaurant, Table
+from .models import Booking, Restaurant, Table
 
 
 class HomePageTests(TestCase):
@@ -167,9 +167,8 @@ class BookingRestaurantTests(TestCase):
             "user": self.user,
             "restaurant": self.restaurant.id,
             "table": self.restaurant.tables.first().id,
-            "date": (datetime.datetime.today() + datetime.timedelta(days=3)).strftime(
-                "%Y-%m-%dT%H:%M"
-            ),
+            "total_guests": 2,
+            "date": book_date(),
         }
         response = self.client.post(self.url, data, follow=True)
         message = list(response.context.get("messages"))[0]
@@ -203,6 +202,13 @@ class BookingRestaurantTests(TestCase):
 
         self.assertEqual(list(expected_queryset), list(queryset))
 
+    def test_restaurant_context(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url, follow=True)
+        context_restaurant = response.context["restaurant"]
+
+        self.assertEqual(context_restaurant, self.restaurant)
+
 
 class MyBookingsTests(TestCase):
     def setUp(self):
@@ -232,3 +238,137 @@ class MyBookingsTests(TestCase):
         response = self.client.get(self.url)
         context = response.context["bookings"]
         self.assertEqual(list(context), [self.booking2])
+
+
+class DeleteMyBookingsTests(TestCase):
+    def setUp(self):
+        self.user = UserFactory(username="james")
+        self.booking = BookingFactory()
+        self.url = f"/delete-booking/{self.booking.id}"
+
+    def test_authentication(self):
+        response = self.client.get(self.url)
+        self.assertRedirects(response, "/login", status_code=302)
+
+    def test_booking_exists(self):
+        self.client.force_login(self.user)
+        url = "/delete-booking/123456"  # test with wrong id
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_template_rendered(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, "delete_booking.html")
+
+    def test_delete_booking_context(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        context = response.context["booking"]
+
+        self.assertEqual(context, self.booking)
+
+    def test_successful_delete(self):
+        self.client.force_login(self.user)
+        # performs a delete
+        response = self.client.post(self.url)
+        deleted_booking_queryset = Booking.objects.filter(id=self.booking.id)
+
+        self.assertEqual(list(deleted_booking_queryset), [])
+        self.assertRedirects(response, "/my-bookings", status_code=302)
+
+
+class UpdateMyBookingsTests(TestCase):
+    def setUp(self):
+        self.user = UserFactory(username="janet")
+        self.restaurant = RestaurantFactory()
+        self.table = TableFactory(restaurant=self.restaurant)
+        self.booking = BookingFactory(
+            user=self.user, restaurant=self.restaurant, table=self.table
+        )
+        self.url = f"/update-booking/{self.booking.id}"
+
+    def test_authentication(self):
+        response = self.client.get(self.url)
+        self.assertRedirects(response, "/login", status_code=302)
+
+    def test_booking_exists(self):
+        self.client.force_login(self.user)
+        url = "/update-booking/123456"  # test with wrong id
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_template_rendered(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertTemplateUsed(response, "update_booking.html")
+
+    def test_successful_update(self):
+        """Change table to window table"""
+        self.client.force_login(self.user)
+        window_table = TableFactory(name="Window Table", restaurant=self.restaurant)
+
+        data = {
+            "table": window_table.id,
+            "date": book_date(),
+            "total_guests": 2,
+        }
+
+        response = self.client.post(self.url, data, follow=True)
+        message = list(response.context.get("messages"))[0]
+
+        self.assertEqual(message.tags, "info")
+        self.assertTrue(
+            f"You successfully updated {self.booking.restaurant.name} booking"
+            in message.message
+        )
+        self.assertRedirects(response, "/my-bookings", status_code=302)
+
+
+class BookingFormTest(TestCase):
+    def setUp(self):
+        self.restaurant = RestaurantFactory()
+        self.table = TableFactory(restaurant=self.restaurant, capacity=3)
+        self.date = book_date()  # future date
+        self.data = {"table": self.table.id, "date": self.date}
+
+    def test_over_capacity_booking(self):
+        self.data["total_guests"] = 8  # over capacity
+
+        form = BookingForm(self.restaurant, self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors["total_guests"],
+            [f"Maximum table capacity is {self.table.capacity}"],
+        )
+
+    def test_exact_capacity_booking(self):
+        self.data["total_guests"] = 3  # exact capacity
+        form = BookingForm(self.restaurant, self.data)
+
+        self.assertTrue(form.is_valid())
+
+    def test_less_than_capacity_booking(self):
+        self.data["total_guests"] = 2  # less than capacity
+        form = BookingForm(self.restaurant, self.data)
+
+        self.assertTrue(form.is_valid())
+
+    def test_zero_capacity_booking(self):
+        self.data["total_guests"] = 0  # less than capacity
+        form = BookingForm(self.restaurant, self.data)
+
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors["total_guests"], ["Cannot book 0 or less guests"],
+        )
+
+
+def book_date(days=3, hours=1, minutes=30, past=False):
+    today = datetime.datetime.today()
+    delta = datetime.timedelta(days, hours, minutes)
+    date = today - delta if past else today + delta
+
+    return date.strftime("%Y-%m-%dT%H:%M")

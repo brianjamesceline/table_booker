@@ -15,5 +15,11 @@ urlpatterns = [
         name="book-restaurant",
     ),
     path("my-bookings", views.my_bookings, name="my-bookings"),
+    path(
+        "delete-booking/<int:booking_id>", views.delete_booking, name="delete-booking"
+    ),
+    path(
+        "update-booking/<int:booking_id>", views.update_booking, name="update-booking"
+    ),
 ]
 
